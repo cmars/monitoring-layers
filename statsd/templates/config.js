@@ -1,4 +1,5 @@
 {
+{% if influx %}
   influxdb: {
     host: '{{influx.hostname}}', // InfluxDB host (default 127.0.0.1)
     port: {{influx.port}}, // InfluxDB port (default 8086)
@@ -14,8 +15,14 @@
       flushInterval: 1000
     }
   },
+{% endif %}
+  backends: [
+{% if influx %}
+    'statsd-influxdb-backend',
+{% endif %}
+    './backends/console'
+  ],
   port: {{cfg.port}}, // statsD port
-  backends: ['./backends/console', 'statsd-influxdb-backend'],
   debug: true,
   legacyNamespace: false
 }

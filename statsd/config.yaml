@@ -1,0 +1,5 @@
+options:
+  port:
+    type: int
+    description: StatsD listen port
+    default: 8125
