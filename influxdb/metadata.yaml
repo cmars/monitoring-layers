@@ -1,0 +1,19 @@
+name: influxdb
+summary: Scalable Time Series DB
+maintainers: 
+  - Casey Marshall <cmars@cmarstech.com>
+description: |
+  Scalable Time Series DB for use with Grafana.
+tags:
+  - database
+provides:
+  admin:
+    interface: http
+  query:
+    interface: influxdb-http
+  graphite:
+    interface: plaintext
+  datastore:
+    interface: sockserver
+  api:
+    interface: influxdb-api
