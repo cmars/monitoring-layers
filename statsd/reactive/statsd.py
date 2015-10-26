@@ -16,10 +16,10 @@ def install():
         return
     apt_update()
     apt_install(['nodejs', 'npm', 'git'])
-    check_call(['git', 'clone', 'https://github.com/etsy/statsd.git'], cwd='/opt')
-    check_call(['npm', 'install', 'statsd-influxdb-backend'])
-    
-    shutil.copyfile('files/upstart', '/etc/init/statsd.conf')
+    charm_dir = hookenv.charm_dir()
+    os.symlink(os.path.join(charm_dir, 'files/statsd'), '/opt/statsd')
+    check_call(['npm', 'install', os.path.join(charm_dir, 'files/statsd-influxdb-backend')])
+    shutil.copyfile(os.path.join(charm_dir, 'files/upstart'), '/etc/init/statsd.conf')
 
 
 @hook('update')
@@ -28,8 +28,8 @@ def update():
         host.service_stop('statsd')
     apt_update()
     apt_upgrade(['nodejs', 'npm', 'git'])
-    check_call(['git', 'pull', 'origin', 'master'], cwd='/opt/statsd')
-    check_call(['npm', 'update', 'statsd-influxdb-backend'])
+    charm_dir = hookenv.charm_dir()
+    check_call(['npm', 'update', os.path.join(charm_dir, 'files/statsd-influxdb-backend')])
     if is_state('statsd.started'):
         host.service_start('statsd')
 
@@ -41,14 +41,6 @@ def config_changed():
         if config.previous('port'):
             hookenv.close_port(config.previous('port'))
         hookenv.open_port(config['port'], protocol='UDP')
-    if not is_state('influxdb.connected'):
-        render(source="config.js",
-            target="/opt/statsd/config.js",
-            owner="root",
-            perms=0o644,
-            context={
-                'cfg': config,
-            })
     set_state('statsd.configured')
 
 
@@ -66,8 +58,18 @@ def stop_statsd():
     remove_state('statsd.started')
 
 
+@when('statsd.configured')
+@when_not('influxdb.connected', 'influxdb.api.available')
+def setup_no_influx():
+    do_setup(None)
+
+
 @when('statsd.configured', 'influxdb.connected', 'influxdb.api.available')
 def setup(db, _):
+    do_setup(db)
+
+
+def do_setup(db):
     remove_state('statsd.start')
     if is_state('statsd.started'):
         host.service_stop('statsd')
